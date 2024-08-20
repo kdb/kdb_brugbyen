@@ -1,0 +1,11 @@
+uuid: b720dbdb-88d1-4f52-8e91-cfb25eb6a738
+langcode: en
+status: true
+dependencies:
+  config:
+    - taxonomy.vocabulary.bb_district
+id: taxonomy_term.bb_district
+target_entity_type_id: taxonomy_term
+target_bundle: bb_district
+default_langcode: da
+language_alterable: false

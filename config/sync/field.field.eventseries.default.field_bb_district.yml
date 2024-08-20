@@ -1,0 +1,29 @@
+uuid: 47df7826-f6d0-40ba-b3dd-304c6caa3627
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.eventseries.field_bb_district
+    - recurring_events.eventseries_type.default
+    - taxonomy.vocabulary.bb_district
+id: eventseries.default.field_bb_district
+field_name: field_bb_district
+entity_type: eventseries
+bundle: default
+label: 'Event bydel'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: taxonomy_unique
+  handler_settings:
+    target_bundles:
+      bb_district: bb_district
+    sort:
+      field: name
+      direction: asc
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference

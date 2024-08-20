@@ -1,0 +1,20 @@
+uuid: 5296a9c0-2bd7-46e6-8698-9e06c5985e0f
+langcode: en
+status: true
+dependencies:
+  module:
+    - recurring_events
+    - taxonomy
+id: eventseries.field_bb_district
+field_name: field_bb_district
+entity_type: eventseries
+type: entity_reference
+settings:
+  target_type: taxonomy_term
+module: core
+locked: false
+cardinality: -1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false
