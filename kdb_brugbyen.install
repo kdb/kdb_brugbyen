@@ -1,0 +1,55 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the kdb_brugbyen module.
+ */
+
+use Drupal\Core\Batch\BatchBuilder;
+use Drupal\Core\Config\ConfigImporterException;
+use Drupal\Core\Config\ConfigImporter;
+use Drupal\Core\Config\Importer\ConfigImporterBatch;
+use Drupal\Core\Config\StorageComparer;
+
+/**
+ * Implements hook_install().
+ */
+function kdb_brugbyen_install() {
+  $importTransformer = \Drupal::service('config.import_transformer');
+  $syncStorage = $importTransformer->transform(\Drupal::service('config.storage.sync'));
+  $config_importer = new ConfigImporter(
+    $storage_comparer = new StorageComparer($syncStorage, \Drupal::service('config.storage')),
+    \Drupal::service('event_dispatcher'),
+    \Drupal::service('config.manager'),
+    \Drupal::service('lock.persistent'),
+    \Drupal::service('config.typed'),
+    \Drupal::service('module_handler'),
+    \Drupal::service('module_installer'),
+    \Drupal::service('theme_handler'),
+    \Drupal::service('string_translation'),
+    \Drupal::service('extension.list.module'),
+    \Drupal::service('extension.list.theme'),
+  );
+  if ($config_importer->alreadyImporting()) {
+    throw new \RuntimeException('Another configuration import already running');
+  }
+  else {
+    try {
+      $sync_steps = $config_importer->initialize();
+      $batch_builder = (new BatchBuilder())
+        ->setTitle(t('Synchronizing configuration'))
+        ->setFinishCallback([ConfigImporterBatch::class, 'finish'])
+        ->setInitMessage(t('Starting configuration synchronization.'))
+        ->setProgressMessage(t('Completed step @current of @total.'))
+        ->setErrorMessage(t('Configuration synchronization has encountered an error.'));
+      foreach ($sync_steps as $sync_step) {
+        $batch_builder->addOperation([ConfigImporterBatch::class, 'process'], [$config_importer, $sync_step]);
+      }
+
+      batch_set($batch_builder->toArray());
+    }
+    catch (ConfigImporterException $e) {
+      throw new \RuntimeException('Error importing configuration');
+    }
+  }
+}
