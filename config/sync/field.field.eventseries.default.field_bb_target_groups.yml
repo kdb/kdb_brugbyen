@@ -1,0 +1,29 @@
+uuid: e7d8b7c0-83bb-4136-a5bb-6c240f75fb89
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.eventseries.field_bb_target_groups
+    - recurring_events.eventseries_type.default
+    - taxonomy.vocabulary.bb_target_groups
+id: eventseries.default.field_bb_target_groups
+field_name: field_bb_target_groups
+entity_type: eventseries
+bundle: default
+label: 'Event målgruppe'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:taxonomy_term'
+  handler_settings:
+    target_bundles:
+      bb_target_groups: bb_target_groups
+    sort:
+      field: name
+      direction: asc
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference

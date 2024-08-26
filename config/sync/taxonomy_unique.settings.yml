@@ -6,3 +6,11 @@ screen_name: 1
 screen_name_message: 'Term %term already exists in vocabulary %vocabulary.'
 bb_district: 1
 bb_district_message: 'Term %term already exists in vocabulary %vocabulary.'
+bb_categories: 1
+bb_categories_message: 'Term %term already exists in vocabulary %vocabulary.'
+bb_target_groups: 1
+bb_target_groups_message: 'Term %term already exists in vocabulary %vocabulary.'
+bb_tags: 1
+bb_tags_message: 'Term %term already exists in vocabulary %vocabulary.'
+categories: 1
+categories_message: 'Term %term already exists in vocabulary %vocabulary.'

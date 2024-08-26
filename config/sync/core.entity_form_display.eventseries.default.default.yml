@@ -3,7 +3,10 @@ langcode: en
 status: true
 dependencies:
   config:
+    - field.field.eventseries.default.field_bb_categories
     - field.field.eventseries.default.field_bb_district
+    - field.field.eventseries.default.field_bb_tags
+    - field.field.eventseries.default.field_bb_target_groups
     - field.field.eventseries.default.field_branch
     - field.field.eventseries.default.field_categories
     - field.field.eventseries.default.field_description
@@ -104,6 +107,24 @@ third_party_settings:
         description: ''
         required_fields: true
         weight: 0
+    group_brugbyen:
+      children:
+        - field_bb_district
+        - field_bb_categories
+        - field_bb_target_groups
+        - field_bb_tags
+      label: Brugbyen
+      region: content
+      parent_name: ''
+      weight: 27
+      format_type: details
+      format_settings:
+        classes: ''
+        show_empty_fields: false
+        id: ''
+        open: true
+        description: ''
+        required_fields: true
 _core:
   default_config_hash: 7_dwlx5EAFGRacPwzHjO_cePFPbST8IjxnowMV4sk0A
 id: eventseries.default.default
@@ -129,9 +150,39 @@ content:
     region: content
     settings: {  }
     third_party_settings: {  }
+  field_bb_categories:
+    type: select2_entity_reference
+    weight: 3
+    region: content
+    settings:
+      width: 100%
+      autocomplete: true
+      match_operator: CONTAINS
+      match_limit: 10
+    third_party_settings: {  }
   field_bb_district:
     type: select2_entity_reference
     weight: 2
+    region: content
+    settings:
+      width: 100%
+      autocomplete: true
+      match_operator: CONTAINS
+      match_limit: 10
+    third_party_settings: {  }
+  field_bb_tags:
+    type: select2_entity_reference
+    weight: 5
+    region: content
+    settings:
+      width: 100%
+      autocomplete: true
+      match_operator: CONTAINS
+      match_limit: 10
+    third_party_settings: {  }
+  field_bb_target_groups:
+    type: select2_entity_reference
+    weight: 4
     region: content
     settings:
       width: 100%

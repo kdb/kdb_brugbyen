@@ -1,19 +1,19 @@
-uuid: 5296a9c0-2bd7-46e6-8698-9e06c5985e0f
+uuid: 6a13fde9-badc-444b-8dc1-0c3a06c934ee
 langcode: en
 status: true
 dependencies:
   module:
     - recurring_events
     - taxonomy
-id: eventseries.field_bb_district
-field_name: field_bb_district
+id: eventseries.field_bb_target_groups
+field_name: field_bb_target_groups
 entity_type: eventseries
 type: entity_reference
 settings:
   target_type: taxonomy_term
 module: core
 locked: false
-cardinality: 1
+cardinality: -1
 translatable: true
 indexes: {  }
 persist_with_no_fields: false

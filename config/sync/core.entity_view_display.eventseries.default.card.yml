@@ -4,7 +4,10 @@ status: true
 dependencies:
   config:
     - core.entity_view_mode.eventseries.card
+    - field.field.eventseries.default.field_bb_categories
     - field.field.eventseries.default.field_bb_district
+    - field.field.eventseries.default.field_bb_tags
+    - field.field.eventseries.default.field_bb_target_groups
     - field.field.eventseries.default.field_branch
     - field.field.eventseries.default.field_categories
     - field.field.eventseries.default.field_description
@@ -70,7 +73,10 @@ hidden:
   daily_recurring_date: true
   event_instances: true
   event_registration: true
+  field_bb_categories: true
   field_bb_district: true
+  field_bb_tags: true
+  field_bb_target_groups: true
   field_branch: true
   field_categories: true
   field_description: true

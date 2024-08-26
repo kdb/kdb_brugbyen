@@ -1,0 +1,29 @@
+uuid: 50798bc2-661e-46e3-b836-0ade7de0b990
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.eventseries.field_bb_tags
+    - recurring_events.eventseries_type.default
+    - taxonomy.vocabulary.bb_tags
+id: eventseries.default.field_bb_tags
+field_name: field_bb_tags
+entity_type: eventseries
+bundle: default
+label: 'Lokale emneord'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:taxonomy_term'
+  handler_settings:
+    target_bundles:
+      bb_tags: bb_tags
+    sort:
+      field: name
+      direction: asc
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference

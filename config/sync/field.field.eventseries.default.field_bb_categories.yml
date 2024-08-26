@@ -1,0 +1,29 @@
+uuid: 31053870-d759-4503-9b7c-99a4b764884e
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.eventseries.field_bb_categories
+    - recurring_events.eventseries_type.default
+    - taxonomy.vocabulary.bb_categories
+id: eventseries.default.field_bb_categories
+field_name: field_bb_categories
+entity_type: eventseries
+bundle: default
+label: 'Event kategorier'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:taxonomy_term'
+  handler_settings:
+    target_bundles:
+      bb_categories: bb_categories
+    sort:
+      field: name
+      direction: asc
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference
