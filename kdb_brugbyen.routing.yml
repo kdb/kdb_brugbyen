@@ -1,0 +1,8 @@
+kdb_brugbyen.feed:
+  path: "/brugbyen-feed"
+  defaults:
+    _controller: '\Drupal\kdb_brugbyen\Controller\FeedController::index'
+  methods: [GET]
+  requirements:
+    # Public feed.
+    _access: 'TRUE'
