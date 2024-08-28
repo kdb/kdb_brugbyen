@@ -10,6 +10,7 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\dpl_event\Form\SettingsForm;
+use Drupal\recurring_events\Entity\EventInstance;
 use Drupal\recurring_events\Entity\EventSeries;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -313,12 +314,14 @@ class FeedController implements ContainerInjectionInterface {
 
       case 'custom':
         // We can't guess a repetition rule from an event with multiple dates,
-        // so we'll just clone it.
-        foreach ($series->get('custom_date') as $range) {
+        // so we'll just clone it. Secondly we'll just use the dates from
+        // instances as they will reflect any edits to the instances which will
+        // save us having to compare series dates to instance dates.
+        foreach ($this->getInstances($series) as $instance) {
           $renderDates[] = [
             // Convert DrupalDateTime to DateTimeImmutable
-            new \DateTimeImmutable($range->start_date->format('c')),
-            new \DateTimeImmutable($range->end_date->format('c')),
+            new \DateTimeImmutable($instance->get('date')->start_date->format('c')),
+            new \DateTimeImmutable($instance->get('date')->end_date->format('c')),
           ];
         }
         break;
@@ -416,6 +419,28 @@ class FeedController implements ContainerInjectionInterface {
     }, $days);
 
     return implode(',', $days);
+  }
+
+  /**
+   * Get an events instances.
+   *
+   * @return Drupal\recurring_events\Entity\EventInstance[]
+   */
+  protected function getInstances(EventSeries $series): array {
+    $storage = $this->entityTypeManager->getStorage('eventinstance');
+    $query = $storage->getQuery()
+      ->accessCheck(TRUE)
+      ->condition('eventseries_id', $series->id())
+      ->condition('status', TRUE);
+
+    return $storage->loadMultiple($query->execute());
+    $result = [];
+
+    foreach ($storage->loadMultiple($query->execute()) as $series) {
+      if ($series instanceof EventSeries && $data = $this->seriesData($series)) {
+        $result = array_merge($result, $data);
+      }
+    }
   }
 
 }
