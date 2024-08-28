@@ -383,7 +383,9 @@ class FeedController implements ContainerInjectionInterface {
 
     $until = NULL;
     if ($startDate != $endDate) {
-      $until = \DateTimeImmutable::createFromFormat('Y-m-d', $endDate);
+      // php-rrule expects to be able to do `setTimezone()` on the until date,
+      // but that doesn't work for DateTimeImmutable.
+      $until = \DateTime::createFromFormat('Y-m-d H:i:s:u', $endDate . '00:00:00:0', new \DateTimeZone('Europe/Copenhagen'));
     }
 
     // And times are stored in American AM/PM format, so we use createFromFormat
