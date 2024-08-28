@@ -11,6 +11,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\dpl_event\Form\SettingsForm;
 use Drupal\recurring_events\Entity\EventSeries;
+use RuntimeException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,6 +20,14 @@ use Symfony\Component\HttpFoundation\Response;
  * Controller for the Brugbyen feed.
  */
 class FeedController implements ContainerInjectionInterface {
+
+  const NTH_MAPPING = [
+    'first' => '1',
+    'second' => '2',
+    'third' => '3',
+    'fourth' => '4',
+    'last' => '-1',
+  ];
 
   /**
    * Constructor.
@@ -61,7 +70,7 @@ class FeedController implements ContainerInjectionInterface {
 
     foreach ($storage->loadMultiple($query->execute()) as $series) {
       if ($series instanceof EventSeries && $data = $this->seriesData($series)) {
-        $result[] = $data;
+        $result = array_merge($result, $data);
       }
     }
 
@@ -70,6 +79,9 @@ class FeedController implements ContainerInjectionInterface {
 
   /**
    * Produce the JSON data for a single event series.
+   *
+   * Can produce multiple instances.
+   *
    * @return mixed
    */
   public function seriesData(EventSeries $series): ?array {
@@ -98,38 +110,51 @@ class FeedController implements ContainerInjectionInterface {
       return NULL;
     }
 
-    return [
-      'uuid' => $series->uuid(),
-      'title' => $series->label(),
-      'last_update' => $this->iso8601($series->get('changed')->value),
-      'url' => $series->toUrl()->setAbsolute(TRUE)->toString(),
-      'image' => $this->getImage($series),
-      'teaser' => $series->get('field_description')->value,
-      'body' => $this->getBody($series),
-      'start_date' => '@todo',
-      'end_date' => '@todo',
-      'schedule_type' => '@todo',
-      'schedule' => [
-        'rrule' => '',
-        'rdate' => '',
-        'exdate' => '',
-      ],
-      'contact' => $this->getContact($series),
-      'ticket_url' => $series->get('field_event_link')->uri,
-      'ticket_categories' => $this->getTicketCategories($series),
-      'district' => $district,
-      'target_groups' => $target_groups,
-      'categories' => $categories,
-      'tags' => $tags,
-    ];
+    $scheduleData = $this->getScheduleData($series);
+
+    $result = [];
+    foreach ($scheduleData as $schedule) {
+      $result[] = [
+        'uuid' => $series->uuid(),
+        'title' => $series->label(),
+        'last_update' => $this->timestampToIso8601($series->get('changed')->value),
+        'url' => $series->toUrl()->setAbsolute(TRUE)->toString(),
+        'image' => $this->getImage($series),
+        'teaser' => $series->get('field_description')->value,
+        'body' => $this->getBody($series),
+        'start_date' => $schedule['start_date'],
+        'end_date' => $schedule['end_date'],
+        'schedule_type' => $schedule['schedule_type'],
+        'schedule' => $schedule['schedule'],
+        'contact' => $this->getContact($series),
+        'ticket_url' => $series->get('field_event_link')->uri,
+        'ticket_categories' => $this->getTicketCategories($series),
+        'district' => $district,
+        'target_groups' => $target_groups,
+        'categories' => $categories,
+        'tags' => $tags,
+      ];
+    }
+
+    return $result;
   }
 
   /**
    * Convert a timestamp to an ISO8601 formatted date.
    */
-  protected function iso8601(string $timestamp): string {
+  protected function timestampToIso8601(string $timestamp): string {
     $date = new \DateTimeImmutable('@' . $timestamp);
 
+    // Use danish timezone for the sanity of developers.
+    $date = $date->setTimezone(new \DateTimeZone('Europe/Copenhagen'));
+
+    return $date->format('c');
+  }
+
+  /**
+   * Render DrupalDateTime an ISO8601 formatted date.
+   */
+  protected function toIso8601(\DateTimeImmutable $date): string {
     // Use danish timezone for the sanity of developers.
     $date = $date->setTimezone(new \DateTimeZone('Europe/Copenhagen'));
 
@@ -234,6 +259,163 @@ class FeedController implements ContainerInjectionInterface {
     }
 
     return $result;
+  }
+
+  /**
+   * Extract scheduling information from event series.
+   *
+   * Can return multiple scheduling instances.
+   */
+  protected function getScheduleData(EventSeries $series): array {
+    require_once(__DIR__ . '/../../php-rrule/src/RRuleInterface.php');
+    require_once(__DIR__ . '/../../php-rrule/src/RRuleTrait.php');
+    require_once(__DIR__ . '/../../php-rrule/src/RRule.php');
+
+    $renderDates = [];
+    $rrule = NULL;
+    $rdate = '';
+    $debug = [];
+    $spec = [];
+    switch ($series->get('recur_type')->value) {
+      case 'weekly_recurring_date':
+        $field = $series->get('weekly_recurring_date')->first();
+        [$startDate, $endDate, $until] = $this->eventDates($field);
+        $renderDates[] = [$startDate, $endDate];
+
+        if ($until) {
+          $spec['dtstart'] = $startDate;
+          $spec['freq'] = 'weekly';
+          $spec['byday'] = $this->rruleDays($field->days);
+          $spec['until'] = $until;
+
+        }
+        break;
+
+      case 'monthly_recurring_date':
+        $field = $series->get('monthly_recurring_date')->first();
+        [$startDate, $endDate, $until] = $this->eventDates($field);
+        $renderDates[] = [$startDate, $endDate];
+
+        if ($until) {
+          $spec['dtstart'] = $startDate;
+          $spec['freq'] = 'monthly';
+          $spec['until'] = $until;
+
+          if ($field->type == 'weekday') {
+            $occurence = self::NTH_MAPPING[$field->day_occurrence];
+            $spec['byday'] = "{$occurence}{$this->rruleDays($field->days)}";
+          }
+          else {
+            $spec['bymonthday'] = $field->day_of_month;
+          }
+        }
+        break;
+
+      case 'custom':
+        // We can't guess a repetition rule from an event with multiple dates,
+        // so we'll just clone it.
+        foreach ($series->get('custom_date') as $range) {
+          $renderDates[] = [
+            // Convert DrupalDateTime to DateTimeImmutable
+            new \DateTimeImmutable($range->start_date->format('c')),
+            new \DateTimeImmutable($range->end_date->format('c')),
+          ];
+        }
+        break;
+
+      case 'consecutive_recurring_date':
+        // Consecutive events is basically repeating double, once within a day,
+        // once across days. That's difficult to put into a single RRULE, and
+        // editorially they're used for things that we're not interested in
+        // sending to brugbyen anyway.
+      default:
+        return [];
+    }
+
+    if ($spec) {
+      $rrule = new \RRule\RRule($spec);
+
+      // RRule adds the DTSTART to the output, but it's implicitly given by the
+      // `start_date`, so strip it from here.
+      $parts = explode("\n", (string) $rrule);
+      $rrule = $parts[1];
+    }
+
+    $result = [];
+
+    foreach ($renderDates as [$startDate, $endDate]) {
+      $scheduleType = 'single';
+
+      if ($rrule) {
+        $scheduleType = 'repeated';
+      }
+      elseif ($startDate->format('Ymd') != $endDate->format('Ymd')) {
+        $scheduleType = 'prolonged';
+      }
+
+      $result[] = [
+        'start_date' => $this->toIso8601($startDate),
+        'end_date' => $this->toIso8601($endDate),
+        'schedule_type' => $scheduleType,
+        'schedule' => [
+          'rrule' => $rrule,
+          'rdate' => '',
+          'exdate' => '',
+        ],
+      ];
+    }
+
+    return $result;
+  }
+
+  /**
+   * Get event start and end as DateTimeImmutables.
+   *
+   * Returns an array of `start`, `end` and `until`
+   */
+  protected function eventDates(\Drupal\recurring_events\Plugin\Field\FieldType\WeeklyRecurringDate $rdate) {
+    // Start and end are stored as datetimes, but the time part is garbage.
+    $startDate = explode('T', $rdate->value)[0];
+    $endDate = explode('T', $rdate->end_value)[0];
+
+    $until = NULL;
+    if ($startDate != $endDate) {
+      $until = \DateTimeImmutable::createFromFormat('Y-m-d', $endDate);
+    }
+
+    // And times are stored in American AM/PM format, so we use createFromFormat
+    // to parse the start date and the time part into a proper DateTimeImmutable.
+    $start = \DateTimeImmutable::createFromFormat('Y-m-d g:i a', "{$startDate} {$rdate->time}");
+
+
+    if ($rdate->duration_or_end_time == 'duration') {
+      // $end = $start->add(new \DateInterval("P{$rdate->duration}S"));
+      $end = $start->modify("+{$rdate->duration} seconds");
+    }
+    else {
+      $end = \DateTimeImmutable::createFromFormat('Y-m-d g:i a', "{$startDate} {$rdate->end_time}");
+    }
+
+    return [
+      $start,
+      $end,
+      $until,
+    ];
+  }
+
+  /**
+   * Convert recurring_events days to rrule days.
+   *
+   * `recurring_events` uses "monday, tuesday" while rrule uses "MO,TU".
+   */
+  protected function rruleDays(string $days): string {
+    $days = explode(',', $days);
+
+    $days = array_map(function ($day) {
+      return strtoupper(substr($day, 0, 2));
+    }, $days);
+
+    return implode(',', $days);
   }
 
 }
