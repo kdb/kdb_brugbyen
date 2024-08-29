@@ -49,7 +49,7 @@ function kdb_brugbyen_install() {
       batch_set($batch_builder->toArray());
     }
     catch (ConfigImporterException $e) {
-      throw new \RuntimeException('Error importing configuration');
+      throw new \RuntimeException('Error importing configuration: ' . $e->getMessage());
     }
   }
 }
