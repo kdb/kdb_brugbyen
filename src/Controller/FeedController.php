@@ -10,9 +10,7 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\dpl_event\Form\SettingsForm;
-use Drupal\recurring_events\Entity\EventInstance;
 use Drupal\recurring_events\Entity\EventSeries;
-use RuntimeException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -271,11 +269,11 @@ class FeedController implements ContainerInjectionInterface {
     require_once(__DIR__ . '/../../php-rrule/src/RRuleInterface.php');
     require_once(__DIR__ . '/../../php-rrule/src/RRuleTrait.php');
     require_once(__DIR__ . '/../../php-rrule/src/RRule.php');
+    require_once(__DIR__ . '/../../php-rrule/src/RSet.php');
 
     $renderDates = [];
     $rrule = NULL;
-    $rdate = '';
-    $debug = [];
+    $rdate = $exdate = '';
     $spec = [];
     switch ($series->get('recur_type')->value) {
       case 'weekly_recurring_date':
@@ -337,10 +335,38 @@ class FeedController implements ContainerInjectionInterface {
 
     if ($spec) {
       $rrule = new \RRule\RRule($spec);
+      $rset = new \RRule\Rset();
+
+      $rset->addRRule($rrule);
+
+      $comparator = function ($a, $b) {
+        return $a <=> $b;
+      };
+
+      // Compare the repeating rule with the actual instances, and add the
+      // exceptions to RDATE/EXDATE.
+      $rruleDates = $rset->getOccurrences();
+      $instanceDates = $this->getInstanceDates($series);
+      $removed = array_udiff($rruleDates, $instanceDates, $comparator);
+      $added = array_udiff($instanceDates, $rruleDates, $comparator);
+
+      // Format dates according to iCal spec.
+      $format = fn($date) => $date->setTimezone(new \DateTimeZone('UTC'))->format('Ymd\THis\Z');
+
+      if ($removed) {
+        $exdate = implode(',', array_map($format, $removed));
+      }
+
+      if ($added) {
+        $rdate = implode(',', array_map($format, $added));
+      }
 
       // RRule adds the DTSTART to the output, but it's implicitly given by the
       // `start_date`, so strip it from here.
       $parts = explode("\n", (string) $rrule);
+      $rrule = $parts[1];
+      // And strip the "RRULE:" prefix.
+      $parts = explode("RRULE:", (string) $rrule);
       $rrule = $parts[1];
     }
 
@@ -362,8 +388,8 @@ class FeedController implements ContainerInjectionInterface {
         'schedule_type' => $scheduleType,
         'schedule' => [
           'rrule' => $rrule,
-          'rdate' => '',
-          'exdate' => '',
+          'rdate' => $rdate,
+          'exdate' => $exdate,
         ],
       ];
     }
@@ -384,8 +410,10 @@ class FeedController implements ContainerInjectionInterface {
     $until = NULL;
     if ($startDate != $endDate) {
       // php-rrule expects to be able to do `setTimezone()` on the until date,
-      // but that doesn't work for DateTimeImmutable.
-      $until = \DateTime::createFromFormat('Y-m-d H:i:s:u', $endDate . '00:00:00:0', new \DateTimeZone('Europe/Copenhagen'));
+      // but that doesn't work for DateTimeImmutable, so we create a regular
+      // DateTime here. We set the time to the end of the day, as it's
+      // inclusive.
+      $until = \DateTime::createFromFormat('Y-m-d H:i:s:u', $endDate . '23:59:59:0', new \DateTimeZone('Europe/Copenhagen'));
     }
 
     // And times are stored in American AM/PM format, so we use createFromFormat
@@ -436,13 +464,15 @@ class FeedController implements ContainerInjectionInterface {
       ->condition('status', TRUE);
 
     return $storage->loadMultiple($query->execute());
-    $result = [];
-
-    foreach ($storage->loadMultiple($query->execute()) as $series) {
-      if ($series instanceof EventSeries && $data = $this->seriesData($series)) {
-        $result = array_merge($result, $data);
-      }
-    }
   }
 
+  protected function getInstanceDates(EventSeries $series): array {
+    $result = [];
+
+    foreach ($this->getInstances($series) as $instance) {
+      $result[] = new \DateTimeImmutable($instance->get('date')->start_date->format('c'));
+    }
+
+    return $result;
+  }
 }
