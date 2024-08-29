@@ -5,3 +5,4 @@ type: module
 core_version_requirement: ^10
 dependencies:
   - dpl_event:dpl_event
+  - recurring_events:recurring_events

@@ -11,6 +11,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\dpl_event\Form\SettingsForm;
 use Drupal\recurring_events\Entity\EventSeries;
+use Drupal\recurring_events\Plugin\Field\FieldType\WeeklyRecurringDate;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -402,7 +403,7 @@ class FeedController implements ContainerInjectionInterface {
    *
    * Returns an array of `start`, `end` and `until`
    */
-  protected function eventDates(\Drupal\recurring_events\Plugin\Field\FieldType\WeeklyRecurringDate $rdate) {
+  protected function eventDates(WeeklyRecurringDate $rdate) {
     // Start and end are stored as datetimes, but the time part is garbage.
     $startDate = explode('T', $rdate->value)[0];
     $endDate = explode('T', $rdate->end_value)[0];
