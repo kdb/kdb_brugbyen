@@ -4,8 +4,6 @@ status: true
 dependencies:
   config:
     - taxonomy.vocabulary.categories
-  module:
-    - path
 id: taxonomy_term.categories.default
 targetEntityType: taxonomy_term
 bundle: categories

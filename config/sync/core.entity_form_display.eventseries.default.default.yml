@@ -17,7 +17,7 @@ dependencies:
     - field.field.eventseries.default.field_event_partners
     - field.field.eventseries.default.field_event_place
     - field.field.eventseries.default.field_event_state
-    - field.field.eventseries.default.field_screen_names
+    - field.field.eventseries.default.field_relevant_ticket_manager
     - field.field.eventseries.default.field_tags
     - field.field.eventseries.default.field_teaser_image
     - field.field.eventseries.default.field_teaser_text
@@ -82,22 +82,6 @@ third_party_settings:
       region: content
       parent_name: ''
       weight: 22
-      format_type: details_sidebar
-      format_settings:
-        classes: ''
-        show_empty_fields: false
-        id: ''
-        open: true
-        description: ''
-        required_fields: true
-        weight: 0
-    group_infoscreen:
-      children:
-        - field_screen_names
-      label: Infoscreen
-      region: content
-      parent_name: ''
-      weight: 25
       format_type: details_sidebar
       format_settings:
         classes: ''
@@ -292,15 +276,12 @@ content:
     settings:
       width: 100%
     third_party_settings: {  }
-  field_screen_names:
-    type: select2_entity_reference
-    weight: 35
+  field_relevant_ticket_manager:
+    type: boolean_checkbox
+    weight: 25
     region: content
     settings:
-      width: 100%
-      autocomplete: false
-      match_operator: CONTAINS
-      match_limit: 10
+      display_label: true
     third_party_settings: {  }
   field_tags:
     type: select2_entity_reference
