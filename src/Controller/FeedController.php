@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\kdb_brugbyen\Controller;
 
+use Drupal\Component\Datetime\Time;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Datetime\DateFormatter;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
+use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\dpl_event\Form\SettingsForm;
 use Drupal\recurring_events\Entity\EventSeries;
 use Drupal\recurring_events\Plugin\Field\FieldType\WeeklyRecurringDate;
@@ -37,6 +39,7 @@ class FeedController implements ContainerInjectionInterface {
     protected DateFormatter $dateFormatter,
     protected FileUrlGeneratorInterface $fileUrlGenerator,
     protected ConfigFactoryInterface $configFactory,
+    protected Time $dateTime,
   ) {}
 
   /**
@@ -48,6 +51,7 @@ class FeedController implements ContainerInjectionInterface {
       $container->get('date.formatter'),
       $container->get('file_url_generator'),
       $container->get('config.factory'),
+      $container->get('datetime.time'),
     );
   }
 
@@ -59,16 +63,23 @@ class FeedController implements ContainerInjectionInterface {
     // `recurring_events` rather messed up data model, this requires a rather
     // complex query, so we'll start out by focusing on the rendering.
 
+    $date = new \DateTimeImmutable('@' . $this->dateTime->getRequestTime());
+    $formatted_from_date = $date->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
 
-    $storage = $this->entityTypeManager->getStorage('eventseries');
+    $seriesStorage = $this->entityTypeManager->getStorage('eventseries');
+    $instanceStorage = $this->entityTypeManager->getStorage('eventinstance');
     // @todo: sort the result?
-    $query = $storage->getQuery()
+    $query = $instanceStorage->getAggregateQuery()
       ->accessCheck(TRUE)
+      ->groupBy('eventseries_id')
+      ->condition('date.value', $formatted_from_date, '>=')
       ->condition('status', TRUE);
+
+    $eventseriesIds = array_map(fn ($res) => $res['eventseries_id'], $query->execute());
 
     $result = [];
 
-    foreach ($storage->loadMultiple($query->execute()) as $series) {
+    foreach ($seriesStorage->loadMultiple($eventseriesIds) as $series) {
       if ($series instanceof EventSeries &&
       (!$nid || $series->get('field_branch')->target_id == $nid) &&
       $data = $this->seriesData($series)) {
