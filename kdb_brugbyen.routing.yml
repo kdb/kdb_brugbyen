@@ -1,7 +1,8 @@
 kdb_brugbyen.feed:
-  path: "/brugbyen-feed"
+  path: "/brugbyen-feed/{nid}"
   defaults:
     _controller: '\Drupal\kdb_brugbyen\Controller\FeedController::index'
+    nid: ''
   methods: [GET]
   requirements:
     # Public feed.

@@ -54,7 +54,7 @@ class FeedController implements ContainerInjectionInterface {
   /**
    * Get feed response.
    */
-  public function index(): Response {
+  public function index($nid = ''): Response {
     // @todo: only select event with future occurrences. Due to
     // `recurring_events` rather messed up data model, this requires a rather
     // complex query, so we'll start out by focusing on the rendering.
@@ -69,7 +69,9 @@ class FeedController implements ContainerInjectionInterface {
     $result = [];
 
     foreach ($storage->loadMultiple($query->execute()) as $series) {
-      if ($series instanceof EventSeries && $data = $this->seriesData($series)) {
+      if ($series instanceof EventSeries &&
+      (!$nid || $series->get('field_branch')->target_id == $nid) &&
+      $data = $this->seriesData($series)) {
         $result = array_merge($result, $data);
       }
     }
