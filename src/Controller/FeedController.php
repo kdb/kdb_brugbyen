@@ -315,8 +315,21 @@ class FeedController implements ContainerInjectionInterface {
           $spec['until'] = $until;
 
           if ($field->type == 'weekday') {
-            $occurence = self::NTH_MAPPING[$field->day_occurrence];
-            $spec['byday'] = "{$occurence}{$this->rruleDays($field->days)}";
+            // Translate the "first", "second", "last" that recurring_events
+            // uses to the 1, 2, -1 that iCal uses.
+            $nths = explode(',', $field->day_occurrence);
+            $nths = array_map(fn ($nth) => self::NTH_MAPPING[$nth], $nths);
+
+            $days = explode(',', $this->rruleDays($field->days));
+
+            // Combine nths with days. "first,last" and "Tuesday,Friday" should
+            // map to "1TU,-1TU,1FR,-1FR".
+            $bydays = [];
+            foreach ($days as $day) {
+              $bydays[] = implode(',', array_map(fn ($nth) => "{$nth}{$day}", $nths));
+            }
+
+            $spec['byday'] = implode(',', $bydays);
           }
           else {
             $spec['bymonthday'] = $field->day_of_month;
