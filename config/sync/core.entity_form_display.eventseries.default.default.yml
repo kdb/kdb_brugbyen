@@ -101,14 +101,16 @@ third_party_settings:
       region: content
       parent_name: ''
       weight: 27
-      format_type: details
+      format_type: details_sidebar
       format_settings:
         classes: ''
         show_empty_fields: false
         id: ''
+        label_as_html: false
         open: true
         description: ''
         required_fields: true
+        weight: 0
 _core:
   default_config_hash: 7_dwlx5EAFGRacPwzHjO_cePFPbST8IjxnowMV4sk0A
 id: eventseries.default.default
