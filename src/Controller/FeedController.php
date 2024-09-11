@@ -59,16 +59,11 @@ class FeedController implements ContainerInjectionInterface {
    * Get feed response.
    */
   public function index($nid = ''): Response {
-    // @todo: only select event with future occurrences. Due to
-    // `recurring_events` rather messed up data model, this requires a rather
-    // complex query, so we'll start out by focusing on the rendering.
-
     $date = new \DateTimeImmutable('@' . $this->dateTime->getRequestTime());
     $formatted_from_date = $date->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
 
     $seriesStorage = $this->entityTypeManager->getStorage('eventseries');
     $instanceStorage = $this->entityTypeManager->getStorage('eventinstance');
-    // @todo: sort the result?
     $query = $instanceStorage->getAggregateQuery()
       ->accessCheck(TRUE)
       ->groupBy('eventseries_id')
