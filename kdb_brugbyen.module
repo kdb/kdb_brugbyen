@@ -21,16 +21,22 @@ function kdb_brugbyen_form_alter(array &$form, FormStateInterface $form_state, $
   // when district is non-empty.
   $districtIsEmpty = [':input[name="field_bb_district"]' => ['value' => '']];
   $form['field_bb_categories']['#states'] = [
+    // We go with both invisible and disabled. Adding in disabled has the
+    // sideeffect of not submitting any value, so the fields is automatically
+    // cleared when district is unset.
+    '!visible' => $districtIsEmpty,
     'disabled' => $districtIsEmpty,
     // Setting required would be nice, but apparently that doesn't work with
     // Select2 and/or field widgets.
   ];
 
   $form['field_bb_target_groups']['#states'] = [
+    '!visible' => $districtIsEmpty,
     'disabled' => $districtIsEmpty,
   ];
 
   $form['field_bb_tags']['#states'] = [
+    '!visible' => $districtIsEmpty,
     'disabled' => $districtIsEmpty,
   ];
 }
