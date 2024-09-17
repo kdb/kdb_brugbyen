@@ -20,20 +20,29 @@ function kdb_brugbyen_form_alter(array &$form, FormStateInterface $form_state, $
   // Only activate the secondary categories, target groups and tags elements
   // when district is non-empty.
   $districtIsEmpty = [':input[name="field_bb_district"]' => ['value' => '']];
+
   $form['field_bb_categories']['#states'] = [
     // We go with both invisible and disabled. Adding in disabled has the
     // sideeffect of not submitting any value, so the fields is automatically
     // cleared when district is unset.
     '!visible' => $districtIsEmpty,
     'disabled' => $districtIsEmpty,
-    // Setting required would be nice, but apparently that doesn't work with
-    // Select2 and/or field widgets.
   ];
+
+  // Mark the required fields as such. Setting #required would cause the Form
+  // API to require the fields unconditionally, but we only require them if
+  // district is non empty. So we have our own validation and just add the
+  // required classes to the label. As the fields are hidden when not required,
+  // we don't need to do this in states (which doesn't work with Select2 and/or
+  // field widgets for some reason).
+  $form['field_bb_categories']['widget']['#label_attributes'] = ['class' => ['form-required', 'js-form-required']];
 
   $form['field_bb_target_groups']['#states'] = [
     '!visible' => $districtIsEmpty,
     'disabled' => $districtIsEmpty,
   ];
+
+  $form['field_bb_target_groups']['widget']['#label_attributes'] = ['class' => ['form-required', 'js-form-required']];
 
   $form['field_bb_tags']['#states'] = [
     '!visible' => $districtIsEmpty,
