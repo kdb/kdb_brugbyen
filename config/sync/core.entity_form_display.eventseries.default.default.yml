@@ -108,7 +108,7 @@ third_party_settings:
         id: ''
         label_as_html: false
         open: true
-        description: ''
+        description: 'Del arrangement med brugbyen.kk.dk'
         required_fields: true
         weight: 0
 _core:
