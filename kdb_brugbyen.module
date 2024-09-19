@@ -17,9 +17,13 @@ function kdb_brugbyen_form_alter(array &$form, FormStateInterface $form_state, $
 
   $form['#validate'][] = 'kdb_brugbyen_eventseries_default_validate';
 
+  $form['field_bb_district']['widget']['#description'] = t('Selected "district" is used for filtering events on brugbyen.');
+
   // Only activate the secondary categories, target groups and tags elements
   // when district is non-empty.
   $districtIsEmpty = [':input[name="field_bb_district"]' => ['value' => '']];
+
+  $form['field_bb_categories']['widget']['#description'] = t('Selected "category" is used for filtering events on brugbyen.');
 
   $form['field_bb_categories']['#states'] = [
     // We go with both invisible and disabled. Adding in disabled has the
@@ -37,12 +41,16 @@ function kdb_brugbyen_form_alter(array &$form, FormStateInterface $form_state, $
   // field widgets for some reason).
   $form['field_bb_categories']['widget']['#label_attributes'] = ['class' => ['form-required', 'js-form-required']];
 
+  $form['field_bb_target_groups']['widget']['#description'] = t('Selected "target group" is used for filtering events on brugbyen.');
+
   $form['field_bb_target_groups']['#states'] = [
     '!visible' => $districtIsEmpty,
     'disabled' => $districtIsEmpty,
   ];
 
   $form['field_bb_target_groups']['widget']['#label_attributes'] = ['class' => ['form-required', 'js-form-required']];
+
+  $form['field_bb_tags']['widget']['#description'] = t('Selected "tag" is used for filtering events on brugbyen.');
 
   $form['field_bb_tags']['#states'] = [
     '!visible' => $districtIsEmpty,
