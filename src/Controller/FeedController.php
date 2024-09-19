@@ -123,7 +123,9 @@ class FeedController implements ContainerInjectionInterface {
     $result = [];
     foreach ($scheduleData as $schedule) {
       $result[] = [
-        'uuid' => $series->uuid(),
+        // @deprecated
+        'uuid' => $series->uuid() . $schedule['id_suffix'],
+        'id' => $series->uuid() . $schedule['id_suffix'],
         'title' => $series->label(),
         'last_update' => $this->timestampToIso8601($series->get('changed')->value),
         'url' => $series->toUrl()->setAbsolute(TRUE)->toString(),
@@ -333,12 +335,13 @@ class FeedController implements ContainerInjectionInterface {
         break;
 
       case 'custom':
+        $i = 1;
         // We can't guess a repetition rule from an event with multiple dates,
         // so we'll just clone it. Secondly we'll just use the dates from
         // instances as they will reflect any edits to the instances which will
         // save us having to compare series dates to instance dates.
         foreach ($this->getInstances($series) as $instance) {
-          $renderDates[] = [
+          $renderDates["-" . $i++] = [
             // Convert DrupalDateTime to DateTimeImmutable
             new \DateTimeImmutable($instance->get('date')->start_date->format('c')),
             new \DateTimeImmutable($instance->get('date')->end_date->format('c')),
@@ -394,7 +397,7 @@ class FeedController implements ContainerInjectionInterface {
 
     $result = [];
 
-    foreach ($renderDates as [$startDate, $endDate]) {
+    foreach ($renderDates as $id_suffix => [$startDate, $endDate]) {
       $scheduleType = 'single';
 
       if ($rrule) {
@@ -405,6 +408,7 @@ class FeedController implements ContainerInjectionInterface {
       }
 
       $result[] = [
+        'id_suffix' => !empty($id_suffix) ? $id_suffix : '',
         'start_date' => $this->toIso8601($startDate),
         'end_date' => $this->toIso8601($endDate),
         'schedule_type' => $scheduleType,
