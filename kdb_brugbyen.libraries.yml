@@ -1,0 +1,6 @@
+fieldset:
+  js:
+    js/kdb_brugbyen_fieldset.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal.ajax

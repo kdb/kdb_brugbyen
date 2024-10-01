@@ -15,6 +15,8 @@ function kdb_brugbyen_form_alter(array &$form, FormStateInterface $form_state, $
     return;
   }
 
+  $form['#attached']['library'][] = 'kdb_brugbyen/fieldset';
+
   $form['#validate'][] = 'kdb_brugbyen_eventseries_default_validate';
 
   $form['field_bb_district']['widget']['#description'] = t('Selected "district" is used for filtering events on brugbyen.');
