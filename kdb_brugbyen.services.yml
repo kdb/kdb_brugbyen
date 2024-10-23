@@ -1,5 +1,5 @@
 services:
-  kbd_brugbyen.event_subscriber:
+  kdb_brugbyen.event_subscriber:
     class: Drupal\kdb_brugbyen\EventSubscriber\OverlayConfigEventSubscriber
     autowire: true
     tags:
