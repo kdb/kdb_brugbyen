@@ -1,0 +1,22 @@
+name: Publish release
+on:
+  push:
+    tags:
+      - "*"
+jobs:
+  publish:
+    name: Publish release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Create archive
+        run: |
+          git archive --format=zip --prefix=kdb_brugbyen/ HEAD -o kdb_brugbyen.zip
+      - name: Publish release
+        uses: ghalactic/github-release-from-tag@v5
+        with:
+          assets: |
+            - path: kdb_brugbyen.zip
