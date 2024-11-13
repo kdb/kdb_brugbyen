@@ -15,8 +15,7 @@ jobs:
       - name: Create archive
         run: |
           git archive --format=zip --prefix=kdb_brugbyen/ HEAD -o kdb_brugbyen.zip
-      - name: Publish release
-        uses: ghalactic/github-release-from-tag@v5
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
-          assets: |
-            - path: kdb_brugbyen.zip
+          files: kdb_brugbyen.zip
