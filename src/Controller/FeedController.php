@@ -67,7 +67,7 @@ class FeedController implements ContainerInjectionInterface {
     $query = $instanceStorage->getAggregateQuery()
       ->accessCheck(TRUE)
       ->groupBy('eventseries_id')
-      ->condition('date.value', $formatted_from_date, '>=')
+      ->condition('date.end_value', $formatted_from_date, '>=')
       ->condition('status', TRUE);
 
     $eventseriesIds = array_map(fn ($res) => $res['eventseries_id'], $query->execute());
