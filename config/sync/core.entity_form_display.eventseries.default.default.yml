@@ -18,6 +18,7 @@ dependencies:
     - field.field.eventseries.default.field_event_place
     - field.field.eventseries.default.field_event_state
     - field.field.eventseries.default.field_relevant_ticket_manager
+    - field.field.eventseries.default.field_screen_names
     - field.field.eventseries.default.field_tags
     - field.field.eventseries.default.field_teaser_image
     - field.field.eventseries.default.field_teaser_text
@@ -82,6 +83,22 @@ third_party_settings:
       region: content
       parent_name: ''
       weight: 22
+      format_type: details_sidebar
+      format_settings:
+        classes: ''
+        show_empty_fields: false
+        id: ''
+        open: true
+        description: ''
+        required_fields: true
+        weight: 0
+    group_infoscreen:
+      children:
+        - field_screen_names
+      label: Infoscreen
+      region: content
+      parent_name: ''
+      weight: 24
       format_type: details_sidebar
       format_settings:
         classes: ''
@@ -206,13 +223,14 @@ content:
     third_party_settings: {  }
   field_event_address:
     type: address_default
-    weight: 11
+    weight: 10
     region: content
-    settings: {  }
+    settings:
+      wrapper_type: details
     third_party_settings: {  }
   field_event_image:
     type: media_library_widget
-    weight: 32
+    weight: 23
     region: content
     settings:
       media_types: {  }
@@ -285,13 +303,23 @@ content:
     settings:
       display_label: true
     third_party_settings: {  }
+  field_screen_names:
+    type: select2_entity_reference
+    weight: 35
+    region: content
+    settings:
+      width: 100%
+      autocomplete: false
+      match_operator: CONTAINS
+      match_limit: 10
+    third_party_settings: {  }
   field_tags:
     type: select2_entity_reference
     weight: 33
     region: content
     settings:
       width: 100%
-      autocomplete: true
+      autocomplete: false
       match_operator: CONTAINS
       match_limit: 10
     third_party_settings: {  }
@@ -349,37 +377,42 @@ content:
           dialog_style: tiles
   monthly_recurring_date:
     type: monthly_recurring_date
-    weight: 8
+    weight: 7
     region: content
     settings: {  }
     third_party_settings: {  }
   path:
     type: path
-    weight: 26
+    weight: 25
     region: content
     settings: {  }
     third_party_settings: {  }
   publish_on:
     type: datetime_timestamp_no_default
-    weight: 18
+    weight: 17
     region: content
     settings: {  }
     third_party_settings: {  }
   recur_type:
     type: select2
-    weight: 4
+    weight: 3
     region: content
     settings:
       width: 100%
     third_party_settings: {  }
   scheduler_settings:
-    weight: 20
+    weight: 19
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  simple_sitemap:
+    weight: 10
     region: content
     settings: {  }
     third_party_settings: {  }
   status:
     type: boolean_checkbox
-    weight: 17
+    weight: 16
     region: content
     settings:
       display_label: true
