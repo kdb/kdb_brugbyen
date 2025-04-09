@@ -12,9 +12,9 @@ use Drupal\Core\Config\Importer\ConfigImporterBatch;
 use Drupal\Core\Config\StorageComparer;
 
 /**
- * Implements hook_install().
+ * Update configuration.
  */
-function kdb_brugbyen_install() {
+function kdb_brugbyen_update_config(): void {
   $importTransformer = \Drupal::service('config.import_transformer');
   $syncStorage = $importTransformer->transform(\Drupal::service('config.storage.sync'));
   $config_importer = new ConfigImporter(
@@ -52,4 +52,18 @@ function kdb_brugbyen_install() {
       throw new \RuntimeException('Error importing configuration: ' . $e->getMessage());
     }
   }
+}
+
+/**
+ * Implements hook_install().
+ */
+function kdb_brugbyen_install(): void {
+  kdb_brugbyen_update_config();
+}
+
+/**
+ * Update config.
+ */
+function kdb_brugbyen_update_10101(): void {
+  kdb_brugbyen_update_config();
 }
