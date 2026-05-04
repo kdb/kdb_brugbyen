@@ -1,6 +1,7 @@
+---
 services:
-  kdb_brugbyen.event_subscriber:
-    class: Drupal\kdb_brugbyen\EventSubscriber\OverlayConfigEventSubscriber
+  kdb_brugbyen.config_overrides:
+    class: Drupal\kdb_brugbyen\Config\ConfigOverrides
     autowire: true
     tags:
-      - { name: event_subscriber }
+      - { name: config.factory.override, priority: 999 }

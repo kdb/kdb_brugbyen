@@ -5,65 +5,74 @@
  * Install, update and uninstall functions for the kdb_brugbyen module.
  */
 
-use Drupal\Core\Batch\BatchBuilder;
-use Drupal\Core\Config\ConfigImporterException;
-use Drupal\Core\Config\ConfigImporter;
-use Drupal\Core\Config\Importer\ConfigImporterBatch;
-use Drupal\Core\Config\StorageComparer;
+/**
+ * Add elements to the list of automatically ignored config entities.
+ *
+ * @see _dpl_update_config_auto_unignore_tites()
+ *  This is a copy of that function - to avoid having another DPL-dependency.
+ */
+function _kdb_brugbyen_config_auto_ignore_entities(array $entities): string {
+  $config_ignore_settings = \Drupal::configFactory()->getEditable('config_ignore_auto.settings');
+  $ignored_configs = $config_ignore_settings->get('ignored_config_entities') ?? [];
+
+  $updated_ignored_configs = array_values(array_unique(array_merge($ignored_configs, $entities)));
+  $config_ignore_settings->set('ignored_config_entities', $updated_ignored_configs)->save();
+  $ignored_entities_string = implode(', ', $entities);
+
+  return "Added $ignored_entities_string to config_ignore_auto.ignored_config_entities.";
+}
 
 /**
- * Update configuration.
+ * Remove elements from the list of automatically ignored config entities.
+ *
+ * @see _dpl_update_config_auto_unignore_entites()
+ *  This is a copy of that function - to avoid having another DPL-dependency.
  */
-function kdb_brugbyen_update_config(): void {
-  $importTransformer = \Drupal::service('config.import_transformer');
-  $syncStorage = $importTransformer->transform(\Drupal::service('config.storage.sync'));
-  $config_importer = new ConfigImporter(
-    $storage_comparer = new StorageComparer($syncStorage, \Drupal::service('config.storage')),
-    \Drupal::service('event_dispatcher'),
-    \Drupal::service('config.manager'),
-    \Drupal::service('lock.persistent'),
-    \Drupal::service('config.typed'),
-    \Drupal::service('module_handler'),
-    \Drupal::service('module_installer'),
-    \Drupal::service('theme_handler'),
-    \Drupal::service('string_translation'),
-    \Drupal::service('extension.list.module'),
-    \Drupal::service('extension.list.theme'),
-  );
-  if ($config_importer->alreadyImporting()) {
-    throw new \RuntimeException('Another configuration import already running');
+function _kdb_brugbyen_config_auto_unignore_entities(array $entities): string {
+  $config_ignore_settings = \Drupal::configFactory()->getEditable('config_ignore_auto.settings');
+  $ignored_configs = $config_ignore_settings->get('ignored_config_entities');
+
+  $updated_ignored_configs = array_diff($ignored_configs, $entities);
+  $config_ignore_settings->set('ignored_config_entities', $updated_ignored_configs)->save();
+  $removed_ignored_entities_string = implode(', ', array_intersect($ignored_configs, $entities));
+  if ($removed_ignored_entities_string) {
+    return "Removed $removed_ignored_entities_string from config_ignore_auto.ignored_config_entities.";
   }
   else {
-    try {
-      $sync_steps = $config_importer->initialize();
-      $batch_builder = (new BatchBuilder())
-        ->setTitle(t('Synchronizing configuration'))
-        ->setFinishCallback([ConfigImporterBatch::class, 'finish'])
-        ->setInitMessage(t('Starting configuration synchronization.'))
-        ->setProgressMessage(t('Completed step @current of @total.'))
-        ->setErrorMessage(t('Configuration synchronization has encountered an error.'));
-      foreach ($sync_steps as $sync_step) {
-        $batch_builder->addOperation([ConfigImporterBatch::class, 'process'], [$config_importer, $sync_step]);
-      }
-
-      batch_set($batch_builder->toArray());
-    }
-    catch (ConfigImporterException $e) {
-      throw new \RuntimeException('Error importing configuration: ' . $e->getMessage());
-    }
+    return "No entities removed from config_ignore_auto.ignored_config_entities.";
   }
 }
 
 /**
  * Implements hook_install().
  */
-function kdb_brugbyen_install(): void {
-  kdb_brugbyen_update_config();
+function kdb_brugbyen_install(): string {
+  return _kdb_brugbyen_config_auto_ignore_entities(['*field_bb_*', '*.bb_*']);
 }
 
 /**
- * Update config.
+ * Make sure our custom brugbyen fields are added to the config ignore.
  */
-function kdb_brugbyen_update_10101(): void {
-  kdb_brugbyen_update_config();
+function kdb_brugbyen_update_11001(): string {
+  return _kdb_brugbyen_config_auto_ignore_entities(['*field_bb_*', '*.bb_*']);
+}
+
+/**
+ * Get config up to date with core.
+ *
+ * We now use ConfigOverrides instead, so we can un-ignore stuff.
+ */
+function kdb_brugbyen_update_11002(): string {
+  $items = [
+    'core.entity_form_display.eventseries.default.default',
+    'core.entity_form_display.taxonomy_term.categories.default',
+    'core.entity_view_display.eventseries.default.card',
+    'core.entity_view_display.eventseries.default.default',
+    'core.entity_view_display.eventseries.default.list',
+    'core.entity_view_display.eventseries.default.nav_spot',
+    'core.entity_view_display.eventseries.default.nav_teaser',
+    'taxonomy.vocabulary.categories',
+  ];
+
+  return _kdb_brugbyen_config_auto_unignore_entities($items);
 }
