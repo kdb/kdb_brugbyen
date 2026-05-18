@@ -221,7 +221,7 @@ class FeedController implements ContainerInjectionInterface {
     $phone = '';
 
     if ($branch) {
-      $name = $branch->label();
+      $name = $name ?: $branch->label();
       $address = $branch->get('field_address');
       $phone = $branch->get('field_phone')->value;
     }
