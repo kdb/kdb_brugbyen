@@ -215,10 +215,10 @@ class FeedController implements ContainerInjectionInterface {
    */
   protected function getContact(EventSeries $series): ?array {
     $branch = $series->get('field_branch')->referencedEntities()[0] ?? NULL;
-    $place = $series->get('field_event_location')->value ?? '';
+    $name = $series->get('field_event_location')->value ?? '';
     $location = $series->get('field_event_place')->value ?? '';
     $address = NULL;
-    $name = $phone = '';
+    $phone = '';
 
     if ($branch) {
       $name = $branch->label();
