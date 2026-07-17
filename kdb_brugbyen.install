@@ -74,3 +74,10 @@ function kdb_brugbyen_update_10101(): void {
 function kdb_brugbyen_update_10102(): void {
   kdb_brugbyen_update_config();
 }
+
+/**
+ * Update config.
+ */
+function kdb_brugbyen_update_10103(): void {
+  kdb_brugbyen_update_config();
+}

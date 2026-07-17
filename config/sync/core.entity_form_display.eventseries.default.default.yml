@@ -3,6 +3,7 @@ langcode: en
 status: true
 dependencies:
   config:
+    - field.field.eventseries.default.field_audiences
     - field.field.eventseries.default.field_bb_categories
     - field.field.eventseries.default.field_bb_district
     - field.field.eventseries.default.field_bb_tags
@@ -12,6 +13,7 @@ dependencies:
     - field.field.eventseries.default.field_categories
     - field.field.eventseries.default.field_description
     - field.field.eventseries.default.field_event_address
+    - field.field.eventseries.default.field_event_address_gsearch
     - field.field.eventseries.default.field_event_all_day
     - field.field.eventseries.default.field_event_image
     - field.field.eventseries.default.field_event_link
@@ -31,9 +33,9 @@ dependencies:
     - field.field.eventseries.default.field_ticket_categories
     - recurring_events.eventseries_type.default
   module:
-    - address
     - datetime_range
     - field_group
+    - gsearch
     - link
     - media_library
     - media_library_edit
@@ -84,10 +86,11 @@ third_party_settings:
       children:
         - field_event_image
         - field_event_state
+        - field_audiences
       label: 'Event details'
       region: content
       parent_name: ''
-      weight: 15
+      weight: 14
       format_type: details_sidebar
       format_settings:
         classes: ''
@@ -115,15 +118,16 @@ third_party_settings:
         weight: 0
     group_library:
       children:
-        - field_branch
+        - field_event_location_type
         - group_location
-      label: Library
+        - field_event_place
+      label: 'Event location'
       region: content
       parent_name: ''
       weight: 4
       format_type: details
       format_settings:
-        classes: ''
+        classes: dpl-event-locations
         show_empty_fields: false
         id: ''
         label_as_html: false
@@ -190,18 +194,17 @@ third_party_settings:
         required_fields: false
     group_location:
       children:
-        - field_event_location_type
+        - field_branch
         - field_event_non_branch_location
         - field_event_location
-        - field_event_address
-        - field_event_place
+        - field_event_address_gsearch
       label: Locations
       region: content
       parent_name: group_library
       weight: 2
       format_type: html_element
       format_settings:
-        classes: dpl-event-locations
+        classes: ''
         show_empty_fields: false
         id: ''
         label_as_html: false
@@ -298,6 +301,16 @@ content:
     region: content
     settings: {  }
     third_party_settings: {  }
+  field_audiences:
+    type: select2_entity_reference
+    weight: 39
+    region: content
+    settings:
+      width: 100%
+      autocomplete: false
+      match_operator: CONTAINS
+      match_limit: 10
+    third_party_settings: {  }
   field_automatic_list_hide:
     type: boolean_checkbox
     weight: 2
@@ -307,7 +320,7 @@ content:
     third_party_settings: {  }
   field_branch:
     type: select2_entity_reference
-    weight: 0
+    weight: 2
     region: content
     settings:
       width: 100%
@@ -333,12 +346,14 @@ content:
       rows: 3
       placeholder: ''
     third_party_settings: {  }
-  field_event_address:
-    type: address_default
+  field_event_address_gsearch:
+    type: address_gsearch
     weight: 5
     region: content
     settings:
-      wrapper_type: fieldset
+      size: 60
+      placeholder: 'Type to search..'
+      freetext_coords: false
     third_party_settings: {  }
   field_event_all_day:
     type: boolean_checkbox
@@ -423,7 +438,7 @@ content:
     third_party_settings: {  }
   field_event_place:
     type: string_textfield
-    weight: 6
+    weight: 3
     region: content
     settings:
       size: 60
@@ -455,7 +470,7 @@ content:
     third_party_settings: {  }
   field_tags:
     type: select2_entity_reference
-    weight: 34
+    weight: 33
     region: content
     settings:
       width: 100%
@@ -465,7 +480,7 @@ content:
     third_party_settings: {  }
   field_teaser_image:
     type: media_library_widget
-    weight: 4
+    weight: 41
     region: content
     settings:
       media_types: {  }
@@ -474,7 +489,7 @@ content:
         show_edit: true
   field_teaser_text:
     type: string_textfield
-    weight: 2
+    weight: 40
     region: content
     settings:
       size: 60
@@ -489,7 +504,7 @@ content:
     third_party_settings: {  }
   field_ticket_categories:
     type: paragraphs
-    weight: 29
+    weight: 30
     region: content
     settings:
       title: Paragraph
@@ -523,7 +538,7 @@ content:
     third_party_settings: {  }
   path:
     type: path
-    weight: 14
+    weight: 13
     region: content
     settings: {  }
     third_party_settings: {  }
@@ -541,7 +556,7 @@ content:
       width: 100%
     third_party_settings: {  }
   scheduler_settings:
-    weight: 13
+    weight: 12
     region: content
     settings: {  }
     third_party_settings: {  }
@@ -596,4 +611,5 @@ content:
 hidden:
   body: true
   excluded_dates: true
+  field_event_address: true
   included_dates: true

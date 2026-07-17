@@ -3,6 +3,7 @@ langcode: en
 status: true
 dependencies:
   config:
+    - field.field.eventseries.default.field_audiences
     - field.field.eventseries.default.field_automatic_list_hide
     - field.field.eventseries.default.field_bb_categories
     - field.field.eventseries.default.field_bb_district
@@ -12,6 +13,7 @@ dependencies:
     - field.field.eventseries.default.field_categories
     - field.field.eventseries.default.field_description
     - field.field.eventseries.default.field_event_address
+    - field.field.eventseries.default.field_event_address_gsearch
     - field.field.eventseries.default.field_event_all_day
     - field.field.eventseries.default.field_event_image
     - field.field.eventseries.default.field_event_link
@@ -31,6 +33,7 @@ dependencies:
     - field.field.eventseries.default.field_ticket_categories
     - recurring_events.eventseries_type.default
   module:
+    - address
     - dpl_event
     - entity_reference_revisions
     - link
@@ -42,6 +45,14 @@ targetEntityType: eventseries
 bundle: default
 mode: default
 content:
+  field_audiences:
+    type: entity_reference_label
+    label: hidden
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 20
+    region: content
   field_bb_categories:
     type: entity_reference_label
     label: above
@@ -90,13 +101,20 @@ content:
     weight: 14
     region: content
   field_event_address:
-    type: dpl_branch_address
+    type: address_default
     label: hidden
     settings:
-      skip_domestic_country: '1'
+      skip_domestic_country: true
       domestic_country: site_default
     third_party_settings: {  }
     weight: 2
+    region: content
+  field_event_address_gsearch:
+    type: dpl_branch_address
+    label: hidden
+    settings: {  }
+    third_party_settings: {  }
+    weight: 18
     region: content
   field_event_image:
     type: entity_reference_entity_view
