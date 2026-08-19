@@ -248,15 +248,15 @@ class RRuleTest extends TestCase
 		$this->assertEquals($occurrences, $rule->getOccurrences());
 		$this->assertEquals($occurrences, $rule->getOccurrences(), 'Cached version');
 		foreach ($occurrences as $date) {
-			$this->assertTrue($rule->occursAt($date), $date->format('r').'in cached version');
+			$this->assertTrue($rule->occursAt($date), $date->format('r').' in cached version');
 		}
 		$rule->clearCache();
 		foreach ($occurrences as $date) {
-			$this->assertTrue($rule->occursAt($date), $date->format('r').'in uncached version');
+			$this->assertTrue($rule->occursAt($date), $date->format('r').' in uncached version');
 		}
 		$rule->clearCache();
 		for ($i = 0; $i < count($occurrences); $i++) {
-			$this->assertEquals($rule[$i], $occurrences[$i], 'array access uncached');
+			$this->assertEquals($rule[$i], $occurrences[$i], ' array access uncached');
 		}
 	}
 
@@ -1786,6 +1786,11 @@ class RRuleTest extends TestCase
 				array('freq' => 'secondly', 'dtstart' => '1999-09-02 09:00:00', 'INTERVAL' => 5),
 				array('1999-09-02 09:00:01')
 			),
+			// https://github.com/rlanvin/php-rrule/issues/164
+			'issue164' => [
+				"DTSTART:20250505T000000Z\nRRULE:FREQ=WEEKLY;UNTIL=20250520T000000Z;INTERVAL=2;BYDAY=MO",
+				['2025-05-12']
+			]
 		);
 	}
 
@@ -1797,6 +1802,17 @@ class RRuleTest extends TestCase
 		$rule = new RRule($rule);
 		foreach ($not_occurrences as $date) {
 			$this->assertFalse($rule->occursAt($date), "Rule must not match $date");
+		}
+	}
+
+	/**
+	 * @dataProvider notOccurrences
+	 */
+	public function testNotOccurrencesWithCarbon($rule, $not_occurrences)
+	{
+		$rule = new RRule($rule);
+		foreach ($not_occurrences as $date) {
+			$this->assertFalse($rule->occursAt(new \Carbon\Carbon($date)), "Rule must not match $date");
 		}
 	}
 
@@ -1833,6 +1849,30 @@ class RRuleTest extends TestCase
 			'COUNT' => 2,
 		]);
 		$this->assertSame('2022-11-06T01:00:00-05:00 CDT 1667714400', $rrule[1]->format('c T U'));
+	}
+
+	public function testResumeFromPartiallyFilledCache()
+	{
+		// https://github.com/rlanvin/php-rrule/issues/160
+		$rrule = new \RRule\RRule([
+			'DTSTART' => new DateTime('2023-03-31 23:59:59.000000'),
+			'FREQ' => 'MONTHLY',
+			'INTERVAL' => '12',
+			'WKST' => 'MO',
+			'COUNT' => 3
+		]);
+
+		// Break on first loop during first iterator use.
+		foreach ($rrule as $occurrence) {
+			break;
+		}
+
+		// Print first 3 occurrences (cache used).
+		$this->assertEquals([
+			date_create('2023-03-31 23:59:59'),
+			date_create('2024-03-31 23:59:59'),
+			date_create('2025-03-31 23:59:59')
+		],$rrule->getOccurrences());
 	}
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2193,8 +2233,6 @@ class RRuleTest extends TestCase
 		}
 	}
 
-
-
 	public function testRfcStringParserWithDtStart()
 	{
 		$rrule = new RRule('RRULE:FREQ=YEARLY');
@@ -2245,8 +2283,12 @@ class RRuleTest extends TestCase
 	 */
 	public function testQuirkyRfcStringsParserNotice($str,$occurrences)
 	{
-		$this->expectException(\PHPUnit\Framework\Error\Notice::class);
-		$rule = new RRule($str);
+		try {
+			$rule = new RRule($str);
+			$this->fail("Expected an notice, didn't get one");
+		} catch (\PHPUnit\Framework\Error\Notice $e) {
+			$this->assertStringContainsString("This string is not compliant with the RFC (DTSTART cannot be part of RRULE).", $e->getMessage());
+		}
 	}
 
 	/**
@@ -2257,7 +2299,7 @@ class RRuleTest extends TestCase
 		$rule = @ new RRule($str);
 
 		if ($occurrences) {
-			$this->assertEquals($occurrences, $rule->getOccurrences(), '', 1);
+			$this->assertEquals($occurrences, $rule->getOccurrences());
 		}
 	}
 
@@ -2354,6 +2396,41 @@ class RRuleTest extends TestCase
 		$str = $rrule->rfcString();
 		$this->assertTrue(strpos($str, '20160708T060000Z')!== false);
 		$new_rrule = new RRule($str);
+	}
+
+	/**
+	 * DateTimeImmutable::setTimezone() returns a new object instead of modifying
+	 * the original one, so the conversion has to be assigned back.
+	 */
+	public function testUnsupportedTimezoneConvertedToUtcWithDateTimeImmutable()
+	{
+		$date = new \DateTimeImmutable('2016-07-08 12:00:00', new DateTimeZone('+06:00'));
+		$rrule = new RRule(array(
+			"freq" => "WEEKLY",
+			"dtstart" => $date,
+			"interval" => 1
+		));
+
+		$str = $rrule->rfcString();
+		$this->assertTrue(strpos($str, '20160708T060000Z') !== false);
+		$new_rrule = new RRule($str);
+	}
+
+	/**
+	 * @see testUnsupportedTimezoneConvertedToUtcWithDateTimeImmutable
+	 */
+	public function testRfcStringWithUntilAndDateTimeImmutable()
+	{
+		$rrule = new RRule(array(
+			"freq" => "DAILY",
+			"dtstart" => new \DateTimeImmutable('2016-07-01 10:00:00', new DateTimeZone('Europe/Paris')),
+			"until" => new \DateTimeImmutable('2016-07-10 22:00:00', new DateTimeZone('Europe/Paris'))
+		));
+
+		// UNTIL must be in UTC (Europe/Paris is UTC+2 in July)
+		$this->assertEquals("DTSTART;TZID=Europe/Paris:20160701T100000\nRRULE:FREQ=DAILY;UNTIL=20160710T200000Z", $rrule->rfcString());
+		// without timezone identifier, UNTIL is put on the DTSTART timezone
+		$this->assertEquals("DTSTART:20160701T100000\nRRULE:FREQ=DAILY;UNTIL=20160710T220000", $rrule->rfcString(false));
 	}
 
 	public function rfcStringsWithoutTimezone()
@@ -2633,6 +2710,27 @@ class RRuleTest extends TestCase
 		$this->assertTrue($rrule->occursAt(date_create('2015-12-02 07:00:00',new DateTimeZone('UTC'))), 'During winter time, Europe/Helsinki is UTC+2 (uncached)');
 	}
 
+	/**
+	 * @see testUnsupportedTimezoneConvertedToUtcWithDateTimeImmutable
+	 */
+	public function testOccursAtTakeTimezoneIntoAccountWithDateTimeImmutable()
+	{
+		$rrule = new RRule(array(
+			'freq' => 'daily',
+			'count' => 365,
+			'byhour' => array(9),
+			'dtstart' => new \DateTimeImmutable('2015-07-01 09:00:00', new DateTimeZone('Australia/Sydney'))
+		));
+		// 2015-07-01 23:00 UTC is 2015-07-02 09:00 in Australia/Sydney (UTC+10)
+		$this->assertTrue($rrule->occursAt(new \DateTimeImmutable('2015-07-01 23:00:00', new DateTimeZone('UTC'))), 'Timezone is converted for comparison (uncached)');
+		$this->assertTrue($rrule->occursAt(new \DateTimeImmutable('2015-07-01 23:00:00', new DateTimeZone('UTC'))), 'Timezone is converted for comparison (cached)');
+
+		// the argument must not be modified by the conversion
+		$date = new \DateTimeImmutable('2015-07-01 23:00:00', new DateTimeZone('UTC'));
+		$rrule->occursAt($date);
+		$this->assertEquals('UTC', $date->getTimezone()->getName());
+	}
+
 	public function rulesWithMismatchedTimezones()
 	{
 		return array(
@@ -2803,10 +2901,10 @@ class RRuleTest extends TestCase
 			'DTSTART' => '2016-01-01'
 		);
 		$rrule = new RRule($array);
-		$this->assertInternalType('array', $rrule->getRule());
+		$this->assertIsArray($rrule->getRule());
 		$rule = $rrule->getRule();
 		$this->assertEquals('YEARLY', $rule['FREQ']);
-		$this->assertInternalType('string', $rule['DTSTART']);
+		$this->assertIsString($rule['DTSTART']);
 
 		$rrule = new RRule("DTSTART;TZID=America/New_York:19970901T090000\nRRULE:FREQ=HOURLY;UNTIL=19971224T000000Z;WKST=SU;BYDAY=MO,WE,FR;BYMONTH=1;BYHOUR=1");
 		$rule = $rrule->getRule();

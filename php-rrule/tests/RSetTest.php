@@ -87,6 +87,36 @@ class RSetTest extends TestCase
 		$this->assertFalse($rset->occursAt('1997-09-03 09:00'));
 	}
 
+	/**
+	 * @see https://github.com/rlanvin/php-rrule/issues/165
+	 */
+	public function testCombineRRuleAndRDateWithDuplicatesArrayAccess()
+	{
+		$rset = new RSet();
+		$rset->addRRule(array(
+			'FREQ' => 'WEEKLY',
+			'BYDAY' => 'TU',
+			'DTSTART' => date_create('2025-06-03 09:00')
+		));
+		$rset->addDate('2025-06-03 09:00');
+		$rset->addDate('2025-06-10 09:00');
+		$rset->addDate('2025-06-11 09:00');
+
+		$occurences = [];
+		for ($i = 0; $i < 5; $i++) {
+			$occurences[] = $rset[$i];
+		}
+		$expected = [
+			date_create('2025-06-03 09:00'),
+			date_create('2025-06-10 09:00'),
+			date_create('2025-06-11 09:00'),
+			date_create('2025-06-17 09:00'),
+			date_create('2025-06-24 09:00')
+		];
+
+		$this->assertEquals($expected, $occurences);
+	}
+
 	public function testRemoveDateFromRSet()
 	{
 		$rset = new RSet();
@@ -591,13 +621,13 @@ class RSetTest extends TestCase
 			'DTSTART' => date_create('1997-09-02 09:00')
 		));
 
-		$this->assertInternalType('array', $rset->getRRules());
+		$this->assertIsArray($rset->getRRules());
 		$this->assertCount(2, $rset->getRRules());
-		$this->assertInternalType('array', $rset->getExRules());
+		$this->assertIsArray($rset->getExRules());
 		$this->assertCount(1, $rset->getExRules());
-		$this->assertInternalType('array', $rset->getDates());
+		$this->assertIsArray($rset->getDates());
 		$this->assertCount(3, $rset->getDates());
-		$this->assertInternalType('array', $rset->getExDates());
+		$this->assertIsArray($rset->getExDates());
 		$this->assertCount(0, $rset->getExDates());
 	}
 
@@ -858,9 +888,12 @@ class RSetTest extends TestCase
 	 */
 	public function testParseQuirkyRfcStringNotice($string, $occurrences)
 	{
-		$this->expectException(\PHPUnit\Framework\Error\Notice::class);
-
-		$object = new RSet($string);
+		try {
+			$object = new RSet($string);
+			$this->fail("Expected an notice, didn't get one");
+		} catch (\PHPUnit\Framework\Error\Notice $e) {
+			$this->assertStringContainsString("This string is not compliant with the RFC (DTSTART cannot be part of RRULE).", $e->getMessage());
+		}
 	}
 
 	/**
