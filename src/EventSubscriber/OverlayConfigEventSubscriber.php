@@ -53,8 +53,10 @@ class OverlayConfigEventSubscriber implements EventSubscriberInterface {
   public static function overlayConfig(StorageInterface $storage, StorageInterface $overlay): void {
     // getAllCollectionNames() doesn't return the default collection, so we have
     // to add it explicitly.
-    $collectionNames = [StorageInterface::DEFAULT_COLLECTION] +
-      $overlay->getAllCollectionNames();
+    $collectionNames = array_merge(
+      [StorageInterface::DEFAULT_COLLECTION],
+      $overlay->getAllCollectionNames(),
+    );
 
     foreach ($collectionNames as $collectionName) {
       $storageCollection = $storage->createCollection($collectionName);

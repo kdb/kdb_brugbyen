@@ -6,10 +6,10 @@ namespace Drupal\kdb_brugbyen\Controller;
 
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
+use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\dpl_event\Form\SettingsForm;
 use Drupal\recurring_events\Entity\EventSeries;
@@ -36,10 +36,10 @@ class FeedController implements ContainerInjectionInterface {
    */
   public function __construct(
     protected EntityTypeManagerInterface $entityTypeManager,
-    protected DateFormatterInterface $dateFormatter,
     protected FileUrlGeneratorInterface $fileUrlGenerator,
     protected ConfigFactoryInterface $configFactory,
     protected TimeInterface $dateTime,
+    protected LoggerChannelInterface $logger,
   ) {}
 
   /**
@@ -48,10 +48,10 @@ class FeedController implements ContainerInjectionInterface {
   public static function create(ContainerInterface $container): self {
     return new static(
       $container->get('entity_type.manager'),
-      $container->get('date.formatter'),
       $container->get('file_url_generator'),
       $container->get('config.factory'),
       $container->get('datetime.time'),
+      $container->get('logger.channel.kdb_brugbyen'),
     );
   }
 
@@ -285,8 +285,13 @@ class FeedController implements ContainerInjectionInterface {
     $spec = [];
     switch ($series->get('recur_type')->value) {
       case 'weekly_recurring_date':
-        $field = $series->get('weekly_recurring_date')->first();
-        [$startDate, $endDate, $until] = $this->eventDates($field);
+        $resolved = $this->recurringDates($series, 'weekly_recurring_date');
+
+        if (!$resolved) {
+          return [];
+        }
+
+        [$field, $startDate, $endDate, $until] = $resolved;
         $renderDates[] = [$startDate, $endDate];
 
         if ($until) {
@@ -294,13 +299,17 @@ class FeedController implements ContainerInjectionInterface {
           $spec['freq'] = 'weekly';
           $spec['byday'] = $this->rruleDays($field->days);
           $spec['until'] = $until;
-
         }
         break;
 
       case 'monthly_recurring_date':
-        $field = $series->get('monthly_recurring_date')->first();
-        [$startDate, $endDate, $until] = $this->eventDates($field);
+        $resolved = $this->recurringDates($series, 'monthly_recurring_date');
+
+        if (!$resolved) {
+          return [];
+        }
+
+        [$field, $startDate, $endDate, $until] = $resolved;
         $renderDates[] = [$startDate, $endDate];
 
         if ($until) {
@@ -357,7 +366,7 @@ class FeedController implements ContainerInjectionInterface {
 
     if ($spec) {
       $rrule = new \RRule\RRule($spec);
-      $rset = new \RRule\Rset();
+      $rset = new \RRule\RSet();
 
       $rset->addRRule($rrule);
 
@@ -421,35 +430,83 @@ class FeedController implements ContainerInjectionInterface {
   }
 
   /**
-   * Get event start and end as DateTimeImmutables.
+   * Resolve a recurring date field and its parsed dates.
    *
-   * Returns an array of `start`, `end` and `until`
+   * Returns `[$field, $start, $end, $until]`, or NULL if the field is empty or
+   * its dates cannot be parsed. In that case a warning is logged and the
+   * caller should skip the series rather than fail the whole feed.
    */
-  protected function eventDates(WeeklyRecurringDate $rdate) {
-    // Start and end are stored as datetimes, but the time part is garbage.
-    $startDate = explode('T', $rdate->value)[0];
-    $endDate = explode('T', $rdate->end_value)[0];
+  protected function recurringDates(EventSeries $series, string $recurType): ?array {
+    $field = $series->get($recurType)->first();
 
-    $until = NULL;
-    if ($startDate != $endDate) {
-      // php-rrule expects to be able to do `setTimezone()` on the until date,
-      // but that doesn't work for DateTimeImmutable, so we create a regular
-      // DateTime here. We set the time to the end of the day, as it's
-      // inclusive.
-      $until = \DateTime::createFromFormat('Y-m-d H:i:s:u', $endDate . '23:59:59:0', new \DateTimeZone('Europe/Copenhagen'));
+    // MonthlyRecurringDate extends WeeklyRecurringDate, so both bundles
+    // satisfy this check.
+    if (!$field instanceof WeeklyRecurringDate) {
+      $this->logger->warning('Skipping event series @id in the brugbyen feed: the @type field is empty.', [
+        '@id' => $series->id(),
+        '@type' => $recurType,
+      ]);
+
+      return NULL;
     }
 
-    // And times are stored in American AM/PM format, so we use createFromFormat
-    // to parse the start date and the time part into a proper DateTimeImmutable.
+    $dates = $this->eventDates($field);
+
+    if (!$dates) {
+      $this->logger->warning('Skipping event series @id in the brugbyen feed: could not parse the @type dates.', [
+        '@id' => $series->id(),
+        '@type' => $recurType,
+      ]);
+
+      return NULL;
+    }
+
+    return [$field, ...$dates];
+  }
+
+  /**
+   * Get event start and end as DateTimeImmutables.
+   *
+   * Returns an array of `start`, `end` and `until`, or NULL if the stored
+   * dates cannot be parsed. `recurring_events` stores the date as a datetime
+   * (with a garbage time part) and the time separately as an American AM/PM
+   * string, and neither is guaranteed to be present or well-formed.
+   */
+  protected function eventDates(WeeklyRecurringDate $rdate): ?array {
+    // Start and end are stored as datetimes, but the time part is garbage.
+    $startDate = explode('T', $rdate->value ?? '')[0];
+    $endDate = explode('T', $rdate->end_value ?? '')[0];
+
+    // And times are stored in American AM/PM format, so we use
+    // createFromFormat to parse the start date and the time part into a proper
+    // DateTimeImmutable.
     $start = \DateTimeImmutable::createFromFormat('Y-m-d g:i a', "{$startDate} {$rdate->time}");
 
+    if (!$start) {
+      return NULL;
+    }
 
     if ($rdate->duration_or_end_time == 'duration') {
-      // $end = $start->add(new \DateInterval("P{$rdate->duration}S"));
       $end = $start->modify("+{$rdate->duration} seconds");
     }
     else {
       $end = \DateTimeImmutable::createFromFormat('Y-m-d g:i a', "{$startDate} {$rdate->end_time}");
+    }
+
+    if (!$end) {
+      return NULL;
+    }
+
+    $until = NULL;
+    if ($startDate != $endDate) {
+      // We set the time to the end of the day, as it's inclusive.
+      $until = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s:u', $endDate . '23:59:59:0', new \DateTimeZone('Europe/Copenhagen'));
+
+      // An unparsable end date would silently drop the repetition rule and
+      // misrepresent the event as a single occurrence, so bail out instead.
+      if (!$until) {
+        return NULL;
+      }
     }
 
     return [
@@ -477,7 +534,7 @@ class FeedController implements ContainerInjectionInterface {
   /**
    * Get an events instances.
    *
-   * @return Drupal\recurring_events\Entity\EventInstance[]
+   * @return \Drupal\recurring_events\Entity\EventInstance[]
    */
   protected function getInstances(EventSeries $series): array {
     $storage = $this->entityTypeManager->getStorage('eventinstance');
@@ -486,7 +543,10 @@ class FeedController implements ContainerInjectionInterface {
       ->condition('eventseries_id', $series->id())
       ->condition('status', TRUE);
 
-    return $storage->loadMultiple($query->execute());
+    /** @var \Drupal\recurring_events\Entity\EventInstance[] $instances */
+    $instances = $storage->loadMultiple($query->execute());
+
+    return $instances;
   }
 
   protected function getInstanceDates(EventSeries $series): array {
