@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\kdb_brugbyen\Controller;
 
-use Drupal\Component\Datetime\Time;
+use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Datetime\DateFormatter;
+use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
@@ -36,10 +36,10 @@ class FeedController implements ContainerInjectionInterface {
    */
   public function __construct(
     protected EntityTypeManagerInterface $entityTypeManager,
-    protected DateFormatter $dateFormatter,
+    protected DateFormatterInterface $dateFormatter,
     protected FileUrlGeneratorInterface $fileUrlGenerator,
     protected ConfigFactoryInterface $configFactory,
-    protected Time $dateTime,
+    protected TimeInterface $dateTime,
   ) {}
 
   /**
