@@ -4,3 +4,4 @@ fieldset:
   dependencies:
     - core/jquery
     - core/drupal.ajax
+    - core/drupal.form

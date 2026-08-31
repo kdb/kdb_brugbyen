@@ -1,0 +1,5 @@
+# Vendored copy of rlanvin/php-rrule — not our code.
+# linguist-vendored keeps it out of the repository language statistics,
+# linguist-generated collapses its diffs on GitHub by default.
+php-rrule/** linguist-vendored=true
+php-rrule/** linguist-generated=true

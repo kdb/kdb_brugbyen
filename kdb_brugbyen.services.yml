@@ -4,3 +4,8 @@ services:
     autowire: true
     tags:
       - { name: event_subscriber }
+
+  logger.channel.kdb_brugbyen:
+    parent: logger.channel_base
+    arguments:
+      - 'kdb_brugbyen'

@@ -2,7 +2,7 @@ name: "KDB Brugbyen"
 description: "Integration with brugbyen.kk.dk"
 package: KDB
 type: module
-core_version_requirement: ^10
+core_version_requirement: ^10 || ^11
 dependencies:
   - dpl_event:dpl_event
   - recurring_events:recurring_events
