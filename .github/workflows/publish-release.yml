@@ -12,6 +12,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Set module version
+        # Drupal shows the "version" key from the info file on the module
+        # list page. The key is set (or replaced, if already present) from the
+        # tag name, so the released archive identifies itself the same way a
+        # drupal.org packaged module does.
+        run: |
+          if grep -qE '^version:' kdb_brugbyen.info.yml; then
+            sed -i -E "s/^version:.*/version: '${GITHUB_REF_NAME}'/" kdb_brugbyen.info.yml
+          else
+            printf "version: '%s'\n" "${GITHUB_REF_NAME}" >> kdb_brugbyen.info.yml
+          fi
+          cat kdb_brugbyen.info.yml
+          git diff --quiet || git -c user.name="github-actions[bot]" \
+              -c user.email="github-actions[bot]@users.noreply.github.com" \
+              commit -am "Set version to ${GITHUB_REF_NAME}"
       - name: Create archive
         run: |
           git archive --format=zip --prefix=kdb_brugbyen/ HEAD -o kdb_brugbyen.zip
