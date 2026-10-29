@@ -23,10 +23,8 @@ jobs:
           else
             printf "version: '%s'\n" "${GITHUB_REF_NAME}" >> kdb_brugbyen.info.yml
           fi
+          # Echo for debugging
           cat kdb_brugbyen.info.yml
-          git diff --quiet || git -c user.name="github-actions[bot]" \
-              -c user.email="github-actions[bot]@users.noreply.github.com" \
-              commit -am "Set version to ${GITHUB_REF_NAME}"
       - name: Create archive
         run: |
           git archive --format=zip --prefix=kdb_brugbyen/ HEAD -o kdb_brugbyen.zip
